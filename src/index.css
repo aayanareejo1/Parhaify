@@ -237,5 +237,66 @@ body {
 @media (max-width: 768px) {
   .sidebar { display: none; }
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
-  .page-content { padding: 16px; }
+  .page-content { padding: 16px; padding-bottom: 80px; }
+  .fab { bottom: 80px; }
+  .toast-container { bottom: 100px; }
 }
+
+/* Mobile bottom nav */
+.mobile-nav {
+  display: none;
+}
+@media (max-width: 768px) {
+  .mobile-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 64px;
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border-subtle);
+    z-index: 800;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 4px;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .mobile-nav-item {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; flex: 1; padding: 8px 0;
+    border: none; background: none; cursor: pointer;
+    color: var(--text-muted); font-family: var(--font); font-size: 10px; font-weight: 500;
+    transition: color 0.15s;
+  }
+  .mobile-nav-item.active { color: var(--indigo); }
+  .mobile-nav-item:hover { color: var(--text-primary); }
+}
+
+/* More sheet */
+.more-sheet-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  z-index: 850; backdrop-filter: blur(4px);
+}
+.more-sheet {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  z-index: 860;
+  padding: 12px 16px 32px;
+}
+.more-sheet-handle {
+  width: 36px; height: 4px; background: var(--bg-hover);
+  border-radius: 99px; margin: 0 auto 16px;
+}
+.more-sheet-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+}
+.more-sheet-item {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; padding: 14px 8px; border-radius: var(--radius);
+  border: none; background: var(--bg-elevated); cursor: pointer;
+  color: var(--text-secondary); font-family: var(--font); font-size: 11px; font-weight: 500;
+  transition: all 0.15s;
+}
+.more-sheet-item.active { background: var(--indigo-dim); color: var(--indigo-hover); }
+.more-sheet-item:hover { background: var(--bg-hover); color: var(--text-primary); }

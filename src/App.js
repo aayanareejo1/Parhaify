@@ -18,7 +18,7 @@ import QuickCapture from './components/QuickCapture';
 import {
   LayoutDashboard, BookOpen, ClipboardList, Users,
   ListTodo, FileText, CalendarDays, Sparkles, Heart,
-  Bell, Zap, Layout, LogOut
+  Bell, Zap, Layout, LogOut, MoreHorizontal, X
 } from 'lucide-react';
 
 const NAV = [
@@ -52,6 +52,24 @@ function AppInner() {
   const [page, setPage] = useState('dashboard');
   const [showCapture, setShowCapture] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [showMore, setShowMore] = useState(false);
+
+  const BOTTOM_NAV = [
+    { id: 'dashboard', label: 'Home', icon: <LayoutDashboard size={20} /> },
+    { id: 'assignments', label: 'Work', icon: <ClipboardList size={20} /> },
+    { id: 'calendar', label: 'Calendar', icon: <CalendarDays size={20} /> },
+    { id: 'notes', label: 'Notes', icon: <FileText size={20} /> },
+    { id: 'more', label: 'More', icon: <MoreHorizontal size={20} /> },
+  ];
+
+  const MORE_PAGES = [
+    { id: 'courses', label: 'Courses', icon: <BookOpen size={18} /> },
+    { id: 'clubs', label: 'Clubs', icon: <Users size={18} /> },
+    { id: 'tasks', label: 'Tasks', icon: <ListTodo size={18} /> },
+    { id: 'spaces', label: 'Spaces', icon: <Layout size={18} /> },
+    { id: 'assistant', label: 'Assistant', icon: <Sparkles size={18} /> },
+    { id: 'wellness', label: 'Wellness', icon: <Heart size={18} /> },
+  ];
 
   const Page = PAGES[page];
   const unread = notifications.filter(n => !n.read).length;
@@ -140,6 +158,51 @@ function AppInner() {
 
       <button className="fab" onClick={() => setShowCapture(true)} title="Quick Capture"><Zap size={22} /></button>
       <QuickCapture open={showCapture} onClose={() => setShowCapture(false)} />
+
+      {/* Mobile bottom nav */}
+      <nav className="mobile-nav">
+        {BOTTOM_NAV.map(item => (
+          <button
+            key={item.id}
+            className={`mobile-nav-item ${(item.id === 'more' ? showMore : page === item.id) ? 'active' : ''}`}
+            onClick={() => {
+              if (item.id === 'more') { setShowMore(true); }
+              else { setPage(item.id); setShowMore(false); }
+            }}
+          >
+            {item.icon}
+            {item.label}
+          </button>
+        ))}
+      </nav>
+
+      {/* More sheet */}
+      {showMore && (
+        <>
+          <div className="more-sheet-overlay" onClick={() => setShowMore(false)} />
+          <div className="more-sheet">
+            <div className="more-sheet-handle" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>More</span>
+              <button onClick={() => setShowMore(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex' }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="more-sheet-grid">
+              {MORE_PAGES.map(item => (
+                <button
+                  key={item.id}
+                  className={`more-sheet-item ${page === item.id ? 'active' : ''}`}
+                  onClick={() => { setPage(item.id); setShowMore(false); }}
+                >
+                  {item.icon}
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
