@@ -29,12 +29,14 @@ export function useBrightspaceSync() {
              c.name.toLowerCase() === bc.name.toLowerCase()
       )
     );
-    const newAssignments = data.assignments.filter(ba =>
-      !cur.some(
-        a => a.title.toLowerCase() === ba.title.toLowerCase() &&
-             a.dueDate === ba.dueDate
-      )
-    );
+    // Dedup against existing DB state AND within the incoming batch itself
+    const seen = new Set(cur.map(a => `${a.title.toLowerCase()}|${a.dueDate}`));
+    const newAssignments = data.assignments.filter(ba => {
+      const key = `${ba.title.toLowerCase()}|${ba.dueDate}`;
+      if (seen.has(key)) return false;
+      seen.add(key); // prevent within-batch duplicates
+      return true;
+    });
     setPending({
       raw: data,
       newCourses,
@@ -110,9 +112,20 @@ export function useBrightspaceSync() {
         if (created) bsToAppId[bc.id] = created.id;
       }
 
+      // Dedup within this batch (handles Brightspace returning same item twice)
+      // and against the latest DB state via the ref
+      const inserted = new Set(); // "title|dueDate" keys added this run
+      const alreadyExists = a =>
+        assignmentsRef.current.some(
+          ex => ex.title.toLowerCase() === a.title.toLowerCase() && ex.dueDate === a.dueDate
+        );
+
       for (const ba of pending.newAssignments) {
         const courseId = bsToAppId[ba.courseId];
         if (!courseId) continue;
+        const key = `${ba.title.toLowerCase()}|${ba.dueDate}`;
+        if (inserted.has(key) || alreadyExists(ba)) continue;
+        inserted.add(key);
         await addAssignment({
           courseId,
           title:    ba.title,
