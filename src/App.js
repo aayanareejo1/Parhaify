@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './index.css';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider, useApp } from './context/AppContext';
@@ -53,6 +53,59 @@ function AppInner() {
   const [showCapture, setShowCapture] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
   const [showMore, setShowMore] = useState(false);
+
+  // Draggable FAB
+  const FAB_SIZE = 52;
+  const MARGIN = 16;
+  const defaultPos = () => ({
+    x: window.innerWidth - FAB_SIZE - MARGIN,
+    y: window.innerHeight - FAB_SIZE - MARGIN - 64,
+  });
+  const savedPos = () => {
+    try { const p = JSON.parse(localStorage.getItem('fabPos')); return p || defaultPos(); }
+    catch { return defaultPos(); }
+  };
+  const [fabPos, setFabPos] = useState(savedPos);
+  const dragRef = useRef({ dragging: false, startX: 0, startY: 0, origX: 0, origY: 0, moved: false });
+
+  const clamp = (pos) => ({
+    x: Math.max(MARGIN, Math.min(window.innerWidth - FAB_SIZE - MARGIN, pos.x)),
+    y: Math.max(MARGIN, Math.min(window.innerHeight - FAB_SIZE - MARGIN, pos.y)),
+  });
+
+  const onDragStart = (clientX, clientY) => {
+    dragRef.current = { dragging: true, startX: clientX, startY: clientY, origX: fabPos.x, origY: fabPos.y, moved: false };
+  };
+
+  useEffect(() => {
+    const onMove = (clientX, clientY) => {
+      if (!dragRef.current.dragging) return;
+      const dx = clientX - dragRef.current.startX;
+      const dy = clientY - dragRef.current.startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dragRef.current.moved = true;
+      if (!dragRef.current.moved) return;
+      const pos = clamp({ x: dragRef.current.origX + dx, y: dragRef.current.origY + dy });
+      setFabPos(pos);
+    };
+    const onEnd = () => {
+      if (dragRef.current.dragging) {
+        dragRef.current.dragging = false;
+        localStorage.setItem('fabPos', JSON.stringify(fabPos));
+      }
+    };
+    const mm = (e) => onMove(e.clientX, e.clientY);
+    const tm = (e) => onMove(e.touches[0].clientX, e.touches[0].clientY);
+    window.addEventListener('mousemove', mm);
+    window.addEventListener('mouseup', onEnd);
+    window.addEventListener('touchmove', tm, { passive: true });
+    window.addEventListener('touchend', onEnd);
+    return () => {
+      window.removeEventListener('mousemove', mm);
+      window.removeEventListener('mouseup', onEnd);
+      window.removeEventListener('touchmove', tm);
+      window.removeEventListener('touchend', onEnd);
+    };
+  }, [fabPos]);
 
   const BOTTOM_NAV = [
     { id: 'dashboard', label: 'Home', icon: <LayoutDashboard size={20} /> },
@@ -159,7 +212,16 @@ function AppInner() {
         </div>
       </div>
 
-      <button className="fab" onClick={() => setShowCapture(true)} title="Quick Capture"><Zap size={22} /></button>
+      <button
+        className="fab"
+        title="Quick Capture"
+        style={{ position: 'fixed', left: fabPos.x, top: fabPos.y, bottom: 'auto', right: 'auto', cursor: dragRef.current.dragging ? 'grabbing' : 'grab' }}
+        onMouseDown={(e) => { e.preventDefault(); onDragStart(e.clientX, e.clientY); }}
+        onTouchStart={(e) => { onDragStart(e.touches[0].clientX, e.touches[0].clientY); }}
+        onClick={() => { if (!dragRef.current.moved) setShowCapture(true); }}
+      >
+        <Zap size={22} />
+      </button>
       <QuickCapture open={showCapture} onClose={() => setShowCapture(false)} />
 
       {/* Mobile bottom nav */}
