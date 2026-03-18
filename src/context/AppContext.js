@@ -132,7 +132,7 @@ export function AppProvider({ children, userId, userProfile }) {
       user_id: userId, code: c.code, name: c.name,
       color: c.color || randColor(), instructor: c.instructor, credits: c.credits,
     }).select().single();
-    if (!error) setCourses(p => [...p, fromCourse(data)]);
+    if (!error) { setCourses(p => [...p, fromCourse(data)]); return fromCourse(data); }
   };
   const updateCourse = async (id, data) => {
     const { error } = await supabase.from('courses').update({

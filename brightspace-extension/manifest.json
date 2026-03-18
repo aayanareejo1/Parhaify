@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Parhaify Brightspace Sync",
+  "version": "1.0.0",
+  "description": "Sync your Brightspace courses and assignments to Parhaify",
+  "permissions": ["storage", "tabs"],
+  "host_permissions": [
+    "*://*.brightspace.com/*",
+    "*://courses.torontomu.ca/*",
+    "https://studyflow-coral.vercel.app/*",
+    "https://studyflow-aayan-areejos-projects.vercel.app/*",
+    "http://localhost:3000/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Parhaify Brightspace Sync"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.brightspace.com/*", "*://courses.torontomu.ca/*"],
+      "js": ["content-brightspace.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://studyflow-coral.vercel.app/*", "https://studyflow-aayan-areejos-projects.vercel.app/*", "http://localhost:3000/*"],
+      "js": ["content-parhaify.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

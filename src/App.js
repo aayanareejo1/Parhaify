@@ -15,6 +15,7 @@ import StudyAssistant from './pages/StudyAssistant';
 import Wellness from './pages/Wellness';
 import Spaces from './pages/Spaces';
 import QuickCapture from './components/QuickCapture';
+import { useBrightspaceSync } from './hooks/useBrightspaceSync';
 import {
   LayoutDashboard, BookOpen, ClipboardList, Users,
   ListTodo, FileText, CalendarDays, Sparkles, Heart,
@@ -49,6 +50,7 @@ const PAGES = {
 function AppInner() {
   const { user, notifications, markNotificationRead, dataLoaded } = useApp();
   const { signOut } = useAuth();
+  const { pending: bsPending, importing: bsImporting, doImport: bsDoImport, dismiss: bsDismiss } = useBrightspaceSync();
   const [page, setPage] = useState('dashboard');
   const [showCapture, setShowCapture] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
@@ -242,6 +244,142 @@ function AppInner() {
           </button>
         ))}
       </nav>
+
+      {/* Brightspace sync confirmation modal */}
+      {bsPending && (
+        <>
+          <div
+            onClick={bsDismiss}
+            style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+              zIndex: 900, backdropFilter: 'blur(2px)',
+            }}
+          />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%',
+            transform: 'translate(-50%,-50%)',
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: 'var(--shadow-lg)',
+            zIndex: 901,
+            width: 'min(460px, calc(100vw - 32px))',
+            maxHeight: '80vh',
+            display: 'flex', flexDirection: 'column',
+            overflow: 'hidden',
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '14px 16px 12px',
+              borderBottom: '1px solid var(--border-subtle)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>Brightspace Import</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                  Review what will be added to Parhaify
+                </div>
+              </div>
+              <button
+                onClick={bsDismiss}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: 4 }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ overflowY: 'auto', padding: '12px 16px', flex: 1 }}>
+              {/* Courses */}
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+                  Courses
+                </div>
+                {bsPending.newCourses.length === 0 ? (
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    All {bsPending.raw.courses.length} course(s) already exist — nothing to add.
+                  </div>
+                ) : (
+                  bsPending.newCourses.map(c => (
+                    <div key={c.id} style={{
+                      fontSize: 12, padding: '5px 8px', borderRadius: 6,
+                      background: 'var(--indigo-dim2)', color: 'var(--indigo)',
+                      marginBottom: 4,
+                    }}>
+                      + {c.name}{c.code ? ` (${c.code})` : ''}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Assignments */}
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+                  Assignments
+                  {bsPending.skipped > 0 && (
+                    <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: 6, textTransform: 'none' }}>
+                      ({bsPending.skipped} already exist, skipped)
+                    </span>
+                  )}
+                </div>
+                {bsPending.newAssignments.length === 0 ? (
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    No new assignments to add.
+                  </div>
+                ) : (
+                  bsPending.newAssignments.map((a, i) => {
+                    const course = bsPending.raw.courses.find(c => c.id === a.courseId);
+                    return (
+                      <div key={i} style={{
+                        fontSize: 12, padding: '5px 8px', borderRadius: 6,
+                        background: 'var(--bg-surface)',
+                        marginBottom: 4,
+                        display: 'flex', justifyContent: 'space-between', gap: 8,
+                      }}>
+                        <span style={{ color: 'var(--text-primary)' }}>
+                          + {a.title}
+                          {course && <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>· {course.code || course.name}</span>}
+                        </span>
+                        <span style={{ color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>{a.dueDate}</span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '12px 16px',
+              borderTop: '1px solid var(--border-subtle)',
+              display: 'flex', gap: 8, justifyContent: 'flex-end',
+            }}>
+              <button
+                onClick={bsDismiss}
+                disabled={bsImporting}
+                style={{
+                  padding: '7px 14px', borderRadius: 7, border: '1px solid var(--border)',
+                  background: 'none', color: 'var(--text-secondary)', fontSize: 12,
+                  fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={bsDoImport}
+                disabled={bsImporting || (bsPending.newCourses.length === 0 && bsPending.newAssignments.length === 0)}
+                style={{
+                  padding: '7px 14px', borderRadius: 7, border: 'none',
+                  background: 'var(--indigo)', color: '#fff', fontSize: 12,
+                  fontWeight: 600, cursor: 'pointer', opacity: bsImporting ? 0.7 : 1,
+                }}
+              >
+                {bsImporting ? 'Importing…' : `Import ${bsPending.newCourses.length + bsPending.newAssignments.length} item(s)`}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* More sheet */}
       {showMore && (
