@@ -43,7 +43,7 @@ export default function Login() {
           }}>
             <Sparkles size={20} color="#fff" />
           </div>
-          <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>StudyFlow</span>
+          <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>Parhaify</span>
         </div>
 
         {/* Heading */}

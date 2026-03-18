@@ -1,6 +1,6 @@
-# StudyFlow
+# Parhaify
 
-A full-stack student productivity web app built with **React** and **Supabase**. StudyFlow helps students manage courses, assignments, clubs, tasks, notes, and wellness all in one place. It is live, fully deployed, and installable as a mobile app on iOS and Android.
+A full-stack student productivity web app built with **React** and **Supabase**. Parhaify helps students manage courses, assignments, clubs, tasks, notes, and wellness all in one place. It is live, fully deployed, and installable as a mobile app on iOS and Android.
 
 **Live App:** [studyflow-aayan-areejos-projects.vercel.app](https://studyflow-aayan-areejos-projects.vercel.app)
 

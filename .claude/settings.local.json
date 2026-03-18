@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm start:*)",
+      "Bash(mv \"icon-192.png.png\" \"icon-192.png\")",
+      "Bash(mv \"icon-512.png.png\" \"icon-512.png\")",
+      "WebFetch(domain:www.linkedin.com)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
+}

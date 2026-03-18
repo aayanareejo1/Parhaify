@@ -147,7 +147,7 @@ function AppInner() {
       <nav className="sidebar">
         <div className="logo">
           <div className="logo-icon">S</div>
-          <span className="logo-text">StudyFlow</span>
+          <span className="logo-text">Parhaify</span>
         </div>
         <div className="nav-section" style={{ flex: 1 }}>
           {NAV.map((item, i) => {

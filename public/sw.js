@@ -1,4 +1,4 @@
-const CACHE = 'studyflow-v1';
+const CACHE = 'parhaify-v1';
 const OFFLINE_URL = '/';
 
 self.addEventListener('install', event => {
