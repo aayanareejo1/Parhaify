@@ -233,6 +233,10 @@ body {
 .notif-btn { position: relative; }
 .notif-badge { position: absolute; top: -2px; right: -2px; background: var(--danger); color: white; font-size: 9px; font-weight: 700; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 
+/* Mobile-only utility */
+.mobile-only { display: none; }
+@media (max-width: 768px) { .mobile-only { display: flex; } }
+
 /* Responsive */
 @media (max-width: 768px) {
   .sidebar { display: none; }

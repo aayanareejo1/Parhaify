@@ -130,6 +130,9 @@ function AppInner() {
       <div className="main-area">
         <div className="topbar">
           <div style={{ flex: 1, fontWeight: 600, fontSize: 14 }}>{currentLabel}</div>
+          <button className="btn-icon mobile-only" onClick={signOut} title="Sign out" style={{ color: 'var(--text-muted)' }}>
+            <LogOut size={18} />
+          </button>
           <div style={{ position: 'relative' }}>
             <button className="btn-icon notif-btn" onClick={() => setShowNotifs(!showNotifs)}>
               <Bell size={18} />
