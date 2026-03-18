@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 
 const COLORS = [
@@ -9,25 +9,28 @@ const randColor = () => COLORS[Math.floor(Math.random() * COLORS.length)];
 
 export function useBrightspaceSync() {
   const { courses, assignments, addCourse, addAssignment } = useApp();
-  const [pending,         setPending]         = useState(null);
-  const [importing,       setImporting]       = useState(false);
-  const [syncing,         setSyncing]         = useState(false);
-  const [syncError,       setSyncError]       = useState('');
-  const [extensionReady,  setExtensionReady]  = useState(false);
+  const [pending,        setPending]        = useState(null);
+  const [importing,      setImporting]      = useState(false);
+  const [syncing,        setSyncing]        = useState(false);
+  const [syncError,      setSyncError]      = useState('');
+  const [extensionReady, setExtensionReady] = useState(false);
 
-  const done = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('brightspace-sync-done'));
-  }, []);
+  // Always-current reference so the event listener never goes stale
+  const coursesRef     = useRef(courses);
+  const assignmentsRef = useRef(assignments);
+  useEffect(() => { coursesRef.current     = courses;     }, [courses]);
+  useEffect(() => { assignmentsRef.current = assignments; }, [assignments]);
 
   const processData = useCallback(data => {
+    const cur = assignmentsRef.current;
     const newCourses = data.courses.filter(bc =>
-      !courses.some(
+      !coursesRef.current.some(
         c => c.code.toLowerCase() === bc.code.toLowerCase() ||
              c.name.toLowerCase() === bc.name.toLowerCase()
       )
     );
     const newAssignments = data.assignments.filter(ba =>
-      !assignments.some(
+      !cur.some(
         a => a.title.toLowerCase() === ba.title.toLowerCase() &&
              a.dueDate === ba.dueDate
       )
@@ -38,50 +41,48 @@ export function useBrightspaceSync() {
       newAssignments,
       skipped: data.assignments.length - newAssignments.length,
     });
-  }, [courses, assignments]);
+  }, []); // stable — reads from refs, no deps needed
 
+  const done = useCallback(() => {
+    localStorage.removeItem('brightspace_pending_sync');
+    window.dispatchEvent(new CustomEvent('brightspace-sync-done'));
+  }, []);
+
+  // Set up listeners ONCE — uses refs so no re-subscription needed
   useEffect(() => {
-    // Detect extension via localStorage flag set by content-parhaify.js
     if (localStorage.getItem('__parhaify_ext')) setExtensionReady(true);
 
-    // Check for pending sync data written before React mounted
-    const stored = localStorage.getItem('brightspace_pending_sync');
-    if (stored) {
-      try {
-        localStorage.removeItem('brightspace_pending_sync');
-        processData(JSON.parse(stored));
-      } catch { /* ignore */ }
-    }
-
-    // Poll in case content script writes after React mounts
-    const poll = setInterval(() => {
+    // Check localStorage for data written by content script before React mounted
+    const checkStorage = () => {
       const s = localStorage.getItem('brightspace_pending_sync');
-      if (s) {
-        try {
-          localStorage.removeItem('brightspace_pending_sync');
-          processData(JSON.parse(s));
-        } catch { /* ignore */ }
-      }
-    }, 1500);
+      if (!s) return;
+      localStorage.removeItem('brightspace_pending_sync');
+      try { processData(JSON.parse(s)); } catch { /* ignore */ }
+    };
+    setTimeout(checkStorage, 600);
 
-    const onSync  = e => processData(e.detail);
-    const onError = e => { setSyncing(false); setSyncError(e.detail || 'Sync failed.'); };
+    const onSync  = e => {
+      localStorage.removeItem('brightspace_pending_sync');
+      setSyncing(false);
+      processData(e.detail);
+    };
+    const onError = e => {
+      setSyncing(false);
+      setSyncError(e.detail || 'Sync failed.');
+    };
 
-    window.addEventListener('brightspace-sync',  onSync);
+    window.addEventListener('brightspace-sync',    onSync);
     window.addEventListener('parhaify-sync-error', onError);
-
     return () => {
-      clearInterval(poll);
-      window.removeEventListener('brightspace-sync',  onSync);
+      window.removeEventListener('brightspace-sync',    onSync);
       window.removeEventListener('parhaify-sync-error', onError);
     };
-  }, [processData]);
+  }, []); // empty — runs once only
 
   const requestSync = () => {
     setSyncing(true);
     setSyncError('');
     window.dispatchEvent(new CustomEvent('parhaify-request-sync'));
-    // Auto-clear syncing state after 30s if no response
     setTimeout(() => setSyncing(false), 30000);
   };
 
@@ -91,7 +92,7 @@ export function useBrightspaceSync() {
     try {
       const bsToAppId = {};
       pending.raw.courses.forEach(bc => {
-        const match = courses.find(
+        const match = coursesRef.current.find(
           c => c.code.toLowerCase() === bc.code.toLowerCase() ||
                c.name.toLowerCase() === bc.name.toLowerCase()
         );
@@ -127,14 +128,14 @@ export function useBrightspaceSync() {
       setImporting(false);
       setPending(null);
       setSyncing(false);
-      done(); // clear chrome.storage + localStorage
+      done();
     }
   };
 
   const dismiss = () => {
     setPending(null);
     setSyncing(false);
-    done(); // also clear on dismiss to prevent re-trigger
+    done();
   };
 
   return {
