@@ -1,7 +1,7 @@
-// Reads pending sync data from chrome.storage and writes it to localStorage
-// so the React app can pick it up on mount. Runs on every page load.
-// Does NOT remove from chrome.storage so data survives login redirects.
+// Signal to the React app that the extension is installed
+localStorage.setItem('__parhaify_ext', '1');
 
+// ── Inject pending sync data into the page ───────────────────────────────────
 function tryInject() {
   chrome.storage.local.get(['pending_sync'], result => {
     if (!result.pending_sync) return;
@@ -16,6 +16,16 @@ if (document.readyState === 'complete') {
   window.addEventListener('load', tryInject);
 }
 
+// ── Listen for sync request from the React app ───────────────────────────────
+window.addEventListener('parhaify-request-sync', () => {
+  chrome.runtime.sendMessage({ type: 'TRIGGER_SCAN' }, response => {
+    if (response?.error) {
+      window.dispatchEvent(new CustomEvent('parhaify-sync-error', { detail: response.error }));
+    }
+  });
+});
+
+// ── Receive sync data from popup or background ────────────────────────────────
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type !== 'BRIGHTSPACE_SYNC') return;
   localStorage.setItem('brightspace_pending_sync', JSON.stringify(msg.data));
@@ -23,7 +33,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   sendResponse({ ok: true });
 });
 
-// Clear chrome.storage once the React app finishes importing
+// ── Clear storage once React finishes importing or dismisses ─────────────────
 window.addEventListener('brightspace-sync-done', () => {
   chrome.storage.local.remove(['pending_sync']);
   localStorage.removeItem('brightspace_pending_sync');

@@ -11,6 +11,9 @@
     "https://studyflow-aayan-areejos-projects.vercel.app/*",
     "http://localhost:3000/*"
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_popup": "popup.html",
     "default_title": "Parhaify Brightspace Sync"

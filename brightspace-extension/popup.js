@@ -10,10 +10,16 @@ const bsUrlInput  = document.getElementById('bsUrl');
 const PARHAIFY_URLS = ['https://studyflow-coral.vercel.app', 'https://studyflow-aayan-areejos-projects.vercel.app', 'http://localhost:3000'];
 
 // ── Load saved state ──────────────────────────────────────────────────────────
+const DEFAULT_BS_URL = 'https://courses.torontomu.ca';
+
 chrome.storage.local.get(['brightspace_data', 'brightspace_url'], result => {
-  if (result.brightspace_url) bsUrlInput.value = result.brightspace_url;
+  bsUrlInput.value = result.brightspace_url || DEFAULT_BS_URL;
   if (result.brightspace_data) renderStats(result.brightspace_data);
+  scanBtn.disabled = false;
 });
+
+// Keep scan button disabled until storage loads
+scanBtn.disabled = true;
 
 bsUrlInput.addEventListener('change', () => {
   chrome.storage.local.set({ brightspace_url: bsUrlInput.value.trim() });

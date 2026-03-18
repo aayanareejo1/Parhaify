@@ -9,8 +9,15 @@ const randColor = () => COLORS[Math.floor(Math.random() * COLORS.length)];
 
 export function useBrightspaceSync() {
   const { courses, assignments, addCourse, addAssignment } = useApp();
-  const [pending, setPending]     = useState(null);
-  const [importing, setImporting] = useState(false);
+  const [pending,         setPending]         = useState(null);
+  const [importing,       setImporting]       = useState(false);
+  const [syncing,         setSyncing]         = useState(false);
+  const [syncError,       setSyncError]       = useState('');
+  const [extensionReady,  setExtensionReady]  = useState(false);
+
+  const done = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('brightspace-sync-done'));
+  }, []);
 
   const processData = useCallback(data => {
     const newCourses = data.courses.filter(bc =>
@@ -19,14 +26,12 @@ export function useBrightspaceSync() {
              c.name.toLowerCase() === bc.name.toLowerCase()
       )
     );
-
     const newAssignments = data.assignments.filter(ba =>
       !assignments.some(
         a => a.title.toLowerCase() === ba.title.toLowerCase() &&
              a.dueDate === ba.dueDate
       )
     );
-
     setPending({
       raw: data,
       newCourses,
@@ -36,17 +41,19 @@ export function useBrightspaceSync() {
   }, [courses, assignments]);
 
   useEffect(() => {
-    // Check localStorage on mount — set by content-parhaify.js before React loads
+    // Detect extension via localStorage flag set by content-parhaify.js
+    if (localStorage.getItem('__parhaify_ext')) setExtensionReady(true);
+
+    // Check for pending sync data written before React mounted
     const stored = localStorage.getItem('brightspace_pending_sync');
     if (stored) {
       try {
         localStorage.removeItem('brightspace_pending_sync');
         processData(JSON.parse(stored));
-      } catch { /* ignore malformed data */ }
+      } catch { /* ignore */ }
     }
 
-    // Also check every 2s in case the content script writes to localStorage
-    // after React has already mounted (timing race)
+    // Poll in case content script writes after React mounts
     const poll = setInterval(() => {
       const s = localStorage.getItem('brightspace_pending_sync');
       if (s) {
@@ -55,20 +62,32 @@ export function useBrightspaceSync() {
           processData(JSON.parse(s));
         } catch { /* ignore */ }
       }
-    }, 2000);
+    }, 1500);
 
-    const handler = e => processData(e.detail);
-    window.addEventListener('brightspace-sync', handler);
+    const onSync  = e => processData(e.detail);
+    const onError = e => { setSyncing(false); setSyncError(e.detail || 'Sync failed.'); };
+
+    window.addEventListener('brightspace-sync',  onSync);
+    window.addEventListener('parhaify-sync-error', onError);
+
     return () => {
-      window.removeEventListener('brightspace-sync', handler);
       clearInterval(poll);
+      window.removeEventListener('brightspace-sync',  onSync);
+      window.removeEventListener('parhaify-sync-error', onError);
     };
   }, [processData]);
+
+  const requestSync = () => {
+    setSyncing(true);
+    setSyncError('');
+    window.dispatchEvent(new CustomEvent('parhaify-request-sync'));
+    // Auto-clear syncing state after 30s if no response
+    setTimeout(() => setSyncing(false), 30000);
+  };
 
   const doImport = async () => {
     if (!pending) return;
     setImporting(true);
-
     try {
       const bsToAppId = {};
       pending.raw.courses.forEach(bc => {
@@ -107,10 +126,19 @@ export function useBrightspaceSync() {
     } finally {
       setImporting(false);
       setPending(null);
-      // Tell content script to clear chrome.storage so re-opening app doesn't re-trigger
-      window.dispatchEvent(new CustomEvent('brightspace-sync-done'));
+      setSyncing(false);
+      done(); // clear chrome.storage + localStorage
     }
   };
 
-  return { pending, importing, doImport, dismiss: () => setPending(null) };
+  const dismiss = () => {
+    setPending(null);
+    setSyncing(false);
+    done(); // also clear on dismiss to prevent re-trigger
+  };
+
+  return {
+    pending, importing, syncing, syncError, extensionReady,
+    requestSync, doImport, dismiss,
+  };
 }

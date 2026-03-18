@@ -50,7 +50,11 @@ const PAGES = {
 function AppInner() {
   const { user, notifications, markNotificationRead, dataLoaded } = useApp();
   const { signOut } = useAuth();
-  const { pending: bsPending, importing: bsImporting, doImport: bsDoImport, dismiss: bsDismiss } = useBrightspaceSync();
+  const {
+    pending: bsPending, importing: bsImporting, syncing: bsSyncing,
+    syncError: bsSyncError, extensionReady: bsExtReady,
+    requestSync: bsRequestSync, doImport: bsDoImport, dismiss: bsDismiss,
+  } = useBrightspaceSync();
   const [page, setPage] = useState('dashboard');
   const [showCapture, setShowCapture] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
@@ -162,6 +166,28 @@ function AppInner() {
           })}
         </div>
         <div className="sidebar-footer">
+          {bsExtReady && (
+            <button
+              onClick={bsRequestSync}
+              disabled={bsSyncing}
+              title="Sync from Brightspace"
+              style={{
+                width: '100%', marginBottom: 8, padding: '7px 10px',
+                background: bsSyncing ? 'var(--bg-surface)' : 'var(--indigo-dim2)',
+                border: '1px solid var(--indigo-dim)',
+                borderRadius: 'var(--radius)', cursor: bsSyncing ? 'default' : 'pointer',
+                color: 'var(--indigo)', fontSize: 12, fontWeight: 600,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}
+            >
+              {bsSyncing ? 'Syncing Brightspace…' : 'Sync Brightspace'}
+            </button>
+          )}
+          {bsSyncError && (
+            <div style={{ fontSize: 11, color: 'var(--danger)', marginBottom: 6, textAlign: 'center' }}>
+              {bsSyncError}
+            </div>
+          )}
           <div className="user-chip" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {user.avatar
               ? <img src={user.avatar} alt={user.name} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
