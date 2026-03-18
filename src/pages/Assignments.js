@@ -146,9 +146,9 @@ export default function Assignments() {
                     <span className={`badge badge-${a.status === 'Completed' ? 'success' : a.status === 'In Progress' ? 'warning' : 'muted'}`}>{a.status}</span>
                   </div>
                 </div>
-                <div className="flex gap-8">
-                  <button className="btn-icon" onClick={() => setEditing(a)}><Pencil size={14} /></button>
-                  <button className="btn-icon" onClick={() => setDeleting(a)}><Trash2 size={14} /></button>
+                <div className="flex gap-4">
+                  <button className="btn-icon" style={{ minWidth: 40, minHeight: 40 }} onClick={() => setEditing(a)}><Pencil size={15} /></button>
+                  <button className="btn-icon" style={{ minWidth: 40, minHeight: 40 }} onClick={() => setDeleting(a)}><Trash2 size={15} /></button>
                 </div>
               </div>
             );

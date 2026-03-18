@@ -32,17 +32,17 @@ export const useToast = () => useContext(ToastContext);
 export function Modal({ open, onClose, title, children, footer, maxWidth = 520 }) {
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose(); };
-    if (open) document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    if (open) { document.addEventListener('keydown', handler); document.body.style.overflow = 'hidden'; }
+    return () => { document.removeEventListener('keydown', handler); document.body.style.overflow = ''; };
   }, [open, onClose]);
 
   if (!open) return null;
   return (
     <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal" style={{ maxWidth }}>
+      <div className="modal" style={{ maxWidth: `min(${maxWidth}px, calc(100vw - 32px))` }}>
         <div className="modal-header">
           <span className="modal-title">{title}</span>
-          <button className="btn-icon" onClick={onClose}><X size={16} /></button>
+          <button className="btn-icon" style={{ minWidth: 44, minHeight: 44 }} onClick={onClose}><X size={18} /></button>
         </div>
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-footer">{footer}</div>}

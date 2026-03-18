@@ -22,11 +22,11 @@ export default function Login() {
       fontFamily: 'var(--font)',
     }}>
       <div style={{
-        width: 380,
+        width: 'min(380px, 100vw - 32px)',
         background: 'var(--bg-surface)',
         border: '1px solid var(--border)',
         borderRadius: 'var(--radius-lg)',
-        padding: '40px 36px',
+        padding: 'clamp(24px, 5vw, 40px) clamp(20px, 5vw, 36px)',
         boxShadow: 'var(--shadow-lg)',
         display: 'flex',
         flexDirection: 'column',

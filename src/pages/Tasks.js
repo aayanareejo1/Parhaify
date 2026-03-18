@@ -163,9 +163,9 @@ export default function Tasks() {
                         </div>
                         {t.notes && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{t.notes}</div>}
                       </div>
-                      <div className="flex gap-6">
-                        <button className="btn-icon" onClick={() => setEditing(t)}><Pencil size={14} /></button>
-                        <button className="btn-icon" onClick={() => setDeleting(t)}><Trash2 size={14} /></button>
+                      <div className="flex gap-4">
+                        <button className="btn-icon" style={{ minWidth: 40, minHeight: 40 }} onClick={() => setEditing(t)}><Pencil size={15} /></button>
+                        <button className="btn-icon" style={{ minWidth: 40, minHeight: 40 }} onClick={() => setDeleting(t)}><Trash2 size={15} /></button>
                       </div>
                     </div>
                   );

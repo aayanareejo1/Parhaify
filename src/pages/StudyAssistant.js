@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import useMobile from '../hooks/useMobile';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../components/UI';
 import { Sparkles, Copy, ExternalLink, BookMarked, Trash2, ChevronDown, ChevronUp, Upload, X, FileText, Loader } from 'lucide-react';
@@ -112,6 +113,7 @@ export default function StudyAssistant() {
   const [extracting, setExtracting] = useState(false);
   const [sourceFileName, setSourceFileName] = useState('');
 
+  const isMobile = useMobile();
   const getCourse = (id) => courses.find(c => c.id === id);
   const selectedCourse = getCourse(courseId);
 
@@ -142,8 +144,8 @@ export default function StudyAssistant() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-        <div style={{ flex: 1 }}>
+      <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexDirection: isMobile ? 'column' : 'row' }}>
+        <div style={{ flex: 1, width: isMobile ? '100%' : 'auto' }}>
           <div className="card" style={{ marginBottom: 16 }}>
             <div style={{ fontWeight: 600, marginBottom: 14, fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
               <Sparkles size={16} color="var(--indigo)" /> Input
@@ -205,7 +207,7 @@ export default function StudyAssistant() {
           </div>
         </div>
 
-        <div style={{ width: 380, flexShrink: 0 }}>
+        <div style={{ width: isMobile ? '100%' : 380, flexShrink: 0 }}>
           <div className="card" style={{ borderColor: generated ? 'var(--indigo)' : 'var(--border-subtle)' }}>
             <div style={{ fontWeight: 600, marginBottom: 14, fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
               <BookMarked size={16} color="var(--indigo)" /> Generated Prompt

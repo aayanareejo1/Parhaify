@@ -182,13 +182,13 @@ export default function QuickCapture({ open, onClose }) {
 
   return (
     <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal" style={{ maxWidth: 480 }}>
+      <div className="modal" style={{ maxWidth: 'min(480px, calc(100vw - 32px))' }}>
         <div className="modal-header">
           <div className="flex items-center gap-8">
             <Zap size={18} color="var(--indigo)" />
             <span className="modal-title">{step === 1 ? 'Quick Capture' : 'Confirm Task'}</span>
           </div>
-          <button className="btn-icon" onClick={onClose}><X size={16} /></button>
+          <button className="btn-icon" style={{ minWidth: 44, minHeight: 44 }} onClick={onClose}><X size={18} /></button>
         </div>
 
         <div className="modal-body">
