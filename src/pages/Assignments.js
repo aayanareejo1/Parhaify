@@ -83,6 +83,13 @@ export default function Assignments() {
   const getCourse = (id) => courses.find(c => c.id === id);
   const priorityColor = { High: 'danger', Medium: 'warning', Low: 'indigo' };
 
+  const isUrgent = (a) => {
+    if (a.status === 'Completed' || !a.dueDate) return false;
+    const due = new Date(`${a.dueDate}T${a.dueTime || '23:59'}`);
+    const diffDays = (due - new Date()) / (1000 * 60 * 60 * 24);
+    return diffDays >= 0 && diffDays <= 3;
+  };
+
   const filtered = assignments
     .filter(a =>
       (!filterCourse || a.courseId === filterCourse) &&
@@ -140,14 +147,17 @@ export default function Assignments() {
             const done = a.status === 'Completed';
             return (
               <div key={a.id} className="card card-sm flex items-center gap-12"
-                style={{ opacity: done ? 0.6 : 1, borderLeft: `3px solid ${course?.color || 'var(--border)'}` }}>
+                style={{ opacity: done ? 0.6 : 1, borderLeft: `3px solid ${isUrgent(a) ? 'var(--danger)' : course?.color || 'var(--border)'}` }}>
                 <button className="btn-icon" style={{ color: done ? 'var(--success)' : 'var(--text-muted)' }} onClick={() => toggle(a)}>
                   <CheckCircle2 size={18} />
                 </button>
                 <div style={{ flex: 1 }}>
                   <div className="flex items-center gap-8">
                     <span style={{ fontWeight: 600, textDecoration: done ? 'line-through' : 'none' }}>{a.title}</span>
-                    <span className={`badge badge-${priorityColor[a.priority]}`}>{a.priority}</span>
+                    {isUrgent(a)
+                      ? <span className="badge badge-danger">Urgent</span>
+                      : <span className={`badge badge-${priorityColor[a.priority]}`}>{a.priority}</span>
+                    }
                     <span className="badge badge-muted">{a.type}</span>
                   </div>
                   <div className="flex gap-12 mt-8" style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
