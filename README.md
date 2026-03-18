@@ -1,54 +1,65 @@
-# StudyFlow 📚
+# StudyFlow
 
-A full-featured student planner built with React. Dark mode, no backend required.
+A full-stack student productivity app built with React and Supabase. Manage your courses, assignments, clubs, tasks, notes, and wellness — all in one place.
 
 ## Features
-- **Dashboard** — Today / This Week / Upcoming / Overdue tabs + stats
-- **Courses** — Color-coded course management (CRUD)
-- **Assignments** — Priority, status, filters
-- **Daily Planner** — Visual time blocks
-- **Notes** — Split-panel editor with auto-save
-- **Study Assistant** — Generate AI prompts (MCQ, short answer, etc.) → open in Claude or ChatGPT
-- **Quick Capture** (⚡ FAB) — Add tasks via text, voice, or image with natural language parsing
-- **Notifications** — Bell icon with upcoming deadline alerts
 
-## Setup (2 steps)
+- **Dashboard** — unified view of all upcoming deadlines and tasks
+- **Courses & Assignments** — track academic work with priorities, due dates, and statuses
+- **Clubs** — manage extracurriculars, meetings, and club tasks
+- **Tasks** — standalone personal tasks grouped by category
+- **Spaces** — custom workspaces with sections (e.g. Job Applications, Projects)
+- **Calendar** — month/day views aggregating all deadlines, time blocks, and meetings
+- **Notes** — rich note editor with auto-save, linked to courses or clubs
+- **Study Assistant** — upload files or paste notes to generate AI study prompts (MCQ, essays, flashcards)
+- **Wellness** — stress tracker, workload chart, mood reflections, study logs
+- **Quick Capture** — draggable floating button to add tasks via text, voice, or image
 
-### Prerequisites
-- [Node.js](https://nodejs.org) — download and install (LTS version)
+## Tech Stack
 
-### Run the app
+- **Frontend** — React 18, Lucide icons, CSS custom properties
+- **Backend** — Supabase (PostgreSQL + Auth)
+- **Auth** — Google OAuth via Supabase
+- **Hosting** — Vercel
+- **PWA** — installable on iOS and Android
+
+## Getting Started
+
+### 1. Clone the repo
 
 ```bash
-# 1. Install dependencies (only needed once)
+git clone https://github.com/aayanareejo1/studyflow.git
+cd studyflow
 npm install
+```
 
-# 2. Start the app
+### 2. Set up Supabase
+
+- Create a project at [supabase.com](https://supabase.com)
+- Run `schema.sql` in the Supabase SQL editor to create all tables
+- Enable Google Auth under Authentication → Providers
+
+### 3. Configure environment variables
+
+Create a `.env` file in the root:
+
+```
+REACT_APP_SUPABASE_URL=https://your-project.supabase.co
+REACT_APP_SUPABASE_ANON_KEY=your-anon-key
+```
+
+### 4. Run locally
+
+```bash
 npm start
 ```
 
-The app will open automatically at **http://localhost:3000**
+## Deployment
 
-## How to use Quick Capture ⚡
-Click the lightning bolt button (bottom-right corner) from any page.
+Deployed on Vercel. Every push to `main` triggers an automatic redeploy.
 
-Try typing:
-- `CPS406 assignment due this Friday at 11:59 PM`
-- `MTH110 quiz tomorrow night`
-- `Lab report for CPS305 due March 22 at 3 PM`
+Add the same environment variables in Vercel under **Settings → Environment Variables**.
 
-It will parse the course, task type, date, and time automatically.
+## Database
 
-## How to use Study Assistant 🤖
-1. Go to **Study Assistant** in the sidebar
-2. Paste your notes or lecture material
-3. Pick an output type (MCQ, Short Answer, etc.)
-4. Click **Generate Prompt**
-5. Click **Open in Claude** or **Open in ChatGPT** — the prompt is auto-copied to your clipboard
-6. Paste it into the AI chat!
-
-## Adding Google OAuth later
-This frontend uses local state. When you're ready to add a backend:
-- Build a Node.js/Express server with Passport.js Google OAuth
-- Replace the `user` state in `AppContext.js` with real session data
-- Add API calls to persist courses/assignments/notes to a database
+All tables use Row Level Security (RLS) — each user can only access their own data. See `schema.sql` for the full schema.
