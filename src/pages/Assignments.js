@@ -83,11 +83,21 @@ export default function Assignments() {
   const getCourse = (id) => courses.find(c => c.id === id);
   const priorityColor = { High: 'danger', Medium: 'warning', Low: 'indigo' };
 
-  const filtered = assignments.filter(a =>
-    (!filterCourse || a.courseId === filterCourse) &&
-    (!filterStatus || a.status === filterStatus) &&
-    (!filterPriority || a.priority === filterPriority)
-  );
+  const filtered = assignments
+    .filter(a =>
+      (!filterCourse || a.courseId === filterCourse) &&
+      (!filterStatus || a.status === filterStatus) &&
+      (!filterPriority || a.priority === filterPriority)
+    )
+    .sort((a, b) => {
+      // Completed items sink to the bottom
+      if (a.status === 'Completed' !== b.status === 'Completed')
+        return a.status === 'Completed' ? 1 : -1;
+      // Then sort by due date/time ascending
+      const da = new Date(`${a.dueDate}T${a.dueTime || '23:59'}`);
+      const db = new Date(`${b.dueDate}T${b.dueTime || '23:59'}`);
+      return da - db;
+    });
 
   const toggle = (a) => updateAssignment(a.id, { status: a.status === 'Completed' ? 'Not Started' : 'Completed' });
 
