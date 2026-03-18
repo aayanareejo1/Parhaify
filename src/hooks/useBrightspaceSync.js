@@ -45,9 +45,24 @@ export function useBrightspaceSync() {
       } catch { /* ignore malformed data */ }
     }
 
+    // Also check every 2s in case the content script writes to localStorage
+    // after React has already mounted (timing race)
+    const poll = setInterval(() => {
+      const s = localStorage.getItem('brightspace_pending_sync');
+      if (s) {
+        try {
+          localStorage.removeItem('brightspace_pending_sync');
+          processData(JSON.parse(s));
+        } catch { /* ignore */ }
+      }
+    }, 2000);
+
     const handler = e => processData(e.detail);
     window.addEventListener('brightspace-sync', handler);
-    return () => window.removeEventListener('brightspace-sync', handler);
+    return () => {
+      window.removeEventListener('brightspace-sync', handler);
+      clearInterval(poll);
+    };
   }, [processData]);
 
   const doImport = async () => {

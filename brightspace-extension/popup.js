@@ -128,38 +128,26 @@ syncBtn.addEventListener('click', async () => {
     );
     if (!stored.brightspace_data) throw new Error('No scan data — please scan first.');
 
+    // Store pending_sync BEFORE opening the tab so the content script finds it
+    // even after a login redirect
+    await new Promise(resolve =>
+      chrome.storage.local.set({ pending_sync: stored.brightspace_data }, resolve)
+    );
+
     // Find or open Parhaify
-    let tab = await findTab(PARHAIFY_URLS);
+    const tab = await findTab(PARHAIFY_URLS);
 
     if (!tab) {
-      tab = await chrome.tabs.create({ url: PARHAIFY_URLS[0] });
-      // Wait for the tab to finish loading before sending a message
-      await new Promise(resolve => {
-        chrome.tabs.onUpdated.addListener(function listener(id, info) {
-          if (id === tab.id && info.status === 'complete') {
-            chrome.tabs.onUpdated.removeListener(listener);
-            resolve();
-          }
-        });
-      });
-      // Give React a moment to hydrate
-      await new Promise(r => setTimeout(r, 2500));
+      await chrome.tabs.create({ url: PARHAIFY_URLS[0] });
+      setStatus('Parhaify is opening — log in and the import will appear automatically.', 'info');
     } else {
       await chrome.tabs.update(tab.id, { active: true });
+      // Try immediate delivery if app is already open
+      try {
+        await sendToTab(tab.id, { type: 'BRIGHTSPACE_SYNC', data: stored.brightspace_data });
+      } catch { /* content script will pick it up from localStorage on next load */ }
+      setStatus('Sync sent! Check Parhaify for the import prompt.', 'success');
     }
-
-    try {
-      await sendToTab(tab.id, {
-        type: 'BRIGHTSPACE_SYNC',
-        data: stored.brightspace_data,
-      });
-    } catch {
-      setStatus('Parhaify tab is not ready yet. Wait a moment and try again.', 'error');
-      setLoading(syncBtn, false, 'Sync to Parhaify');
-      return;
-    }
-
-    setStatus('Data sent! Check Parhaify for the import prompt.', 'success');
   } catch (err) {
     setStatus(err.message || 'Sync failed.', 'error');
   } finally {
