@@ -22,3 +22,9 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   window.dispatchEvent(new CustomEvent('brightspace-sync', { detail: msg.data }));
   sendResponse({ ok: true });
 });
+
+// Clear chrome.storage once the React app finishes importing
+window.addEventListener('brightspace-sync-done', () => {
+  chrome.storage.local.remove(['pending_sync']);
+  localStorage.removeItem('brightspace_pending_sync');
+});

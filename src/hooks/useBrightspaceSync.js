@@ -107,6 +107,8 @@ export function useBrightspaceSync() {
     } finally {
       setImporting(false);
       setPending(null);
+      // Tell content script to clear chrome.storage so re-opening app doesn't re-trigger
+      window.dispatchEvent(new CustomEvent('brightspace-sync-done'));
     }
   };
 
