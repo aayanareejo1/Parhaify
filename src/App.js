@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import './index.css';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider, useApp } from './context/AppContext';
 import { ToastProvider } from './components/UI';
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Courses from './pages/Courses';
 import Assignments from './pages/Assignments';
@@ -16,7 +18,7 @@ import QuickCapture from './components/QuickCapture';
 import {
   LayoutDashboard, BookOpen, ClipboardList, Users,
   ListTodo, FileText, CalendarDays, Sparkles, Heart,
-  Bell, Zap, Layout
+  Bell, Zap, Layout, LogOut
 } from 'lucide-react';
 
 const NAV = [
@@ -45,7 +47,8 @@ const PAGES = {
 };
 
 function AppInner() {
-  const { user, notifications, markNotificationRead } = useApp();
+  const { user, notifications, markNotificationRead, dataLoaded } = useApp();
+  const { signOut } = useAuth();
   const [page, setPage] = useState('dashboard');
   const [showCapture, setShowCapture] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
@@ -53,6 +56,18 @@ function AppInner() {
   const Page = PAGES[page];
   const unread = notifications.filter(n => !n.read).length;
   const currentLabel = NAV.find(n => n.id === page)?.label || '';
+
+  if (!dataLoaded) {
+    return (
+      <div style={{
+        height: '100vh', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', background: 'var(--bg-base)',
+        color: 'var(--text-muted)', fontSize: 13,
+      }}>
+        Loading your workspace...
+      </div>
+    );
+  }
 
   return (
     <div className="app-layout">
@@ -72,12 +87,24 @@ function AppInner() {
           })}
         </div>
         <div className="sidebar-footer">
-          <div className="user-chip">
-            <div className="avatar">{user.avatar}</div>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{user.name}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{user.email}</div>
+          <div className="user-chip" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {user.avatar
+              ? <img src={user.avatar} alt={user.name} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
+              : <div className="avatar">{user.initials}</div>
+            }
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
             </div>
+            <button
+              onClick={signOut}
+              title="Sign out"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center' }}
+              onMouseEnter={e => e.currentTarget.style.color = 'var(--danger)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+            >
+              <LogOut size={14} />
+            </button>
           </div>
         </div>
       </nav>
@@ -117,12 +144,36 @@ function AppInner() {
   );
 }
 
-export default function App() {
+function AppRoot() {
+  const { session, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div style={{
+        height: '100vh', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', background: 'var(--bg-base)',
+        color: 'var(--text-muted)', fontSize: 13,
+      }}>
+        Loading...
+      </div>
+    );
+  }
+
+  if (!session) return <Login />;
+
   return (
-    <AppProvider>
+    <AppProvider userId={session.user.id} userProfile={session.user}>
       <ToastProvider>
         <AppInner />
       </ToastProvider>
     </AppProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppRoot />
+    </AuthProvider>
   );
 }

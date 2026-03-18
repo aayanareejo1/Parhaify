@@ -1,105 +1,113 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 
 const AppContext = createContext();
 
 const COLORS = [
   '#6366f1','#8b5cf6','#ec4899','#f43f5e','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4','#3b82f6'
 ];
-
 const SPACE_ICONS = ['💼','🎯','🏋️','✈️','🎨','🔬','💡','📚','🎵','🏠','❤️','⚡'];
+const randColor = () => COLORS[Math.floor(Math.random() * COLORS.length)];
 
-const today = new Date();
-const fmt = (d) => d.toISOString().split('T')[0];
-const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
+// ─── DB → App mappers ───────────────────────────────────────────────────────
+const fromCourse    = r => ({ id: r.id, code: r.code, name: r.name, color: r.color, instructor: r.instructor, credits: r.credits });
+const fromAssign    = r => ({ id: r.id, courseId: r.course_id, title: r.title, type: r.type, dueDate: r.due_date, dueTime: r.due_time, priority: r.priority, status: r.status, notes: r.notes });
+const fromNote      = r => ({ id: r.id, courseId: r.course_id, clubId: r.club_id, title: r.title, content: r.content, updatedAt: r.updated_at, isMeetingNote: r.is_meeting_note });
+const fromBlock     = r => ({ id: r.id, courseId: r.course_id, title: r.title, date: r.date, startTime: r.start_time, endTime: r.end_time, color: r.color });
+const fromLog       = r => ({ id: r.id, courseId: r.course_id, date: r.date, hours: r.hours, notes: r.notes });
+const fromPrompt    = r => ({ id: r.id, prompt: r.prompt, outputType: r.output_type, outputTypeLabel: r.output_type_label, courseId: r.course_id, courseName: r.course_name, sourceFile: r.source_file, savedAt: r.saved_at });
+const fromReflect   = r => ({ id: r.id, mood: r.mood, wins: r.wins, struggles: r.struggles, notes: r.notes, week: r.week, createdAt: r.created_at });
+const fromClub      = r => ({ id: r.id, name: r.name, shortName: r.short_name, color: r.color, role: r.role, description: r.description });
+const fromClubTask  = r => ({ id: r.id, clubId: r.club_id, title: r.title, type: r.type, dueDate: r.due_date, dueTime: r.due_time, priority: r.priority, status: r.status, notes: r.notes });
+const fromMeeting   = r => ({ id: r.id, clubId: r.club_id, title: r.title, date: r.date, time: r.time, location: r.location, attendees: r.attendees, agenda: r.agenda, noteId: r.note_id });
+const fromTask      = r => ({ id: r.id, title: r.title, category: r.category, dueDate: r.due_date, dueTime: r.due_time, priority: r.priority, status: r.status, notes: r.notes, color: r.color });
+const fromSpace     = r => ({ id: r.id, name: r.name, icon: r.icon, color: r.color });
+const fromSection   = r => ({ id: r.id, spaceId: r.space_id, name: r.name });
+const fromSpaceTask = r => ({ id: r.id, spaceId: r.space_id, sectionId: r.section_id, title: r.title, dueDate: r.due_date, dueTime: r.due_time, priority: r.priority, status: r.status, notes: r.notes });
 
-const sampleCourses = [
-  { id: '1', code: 'CPS406', name: 'Software Engineering', color: '#6366f1', instructor: 'Dr. Smith', credits: 3 },
-  { id: '2', code: 'MTH110', name: 'Calculus I', color: '#ec4899', instructor: 'Dr. Lee', credits: 3 },
-  { id: '3', code: 'CPS305', name: 'Data Structures', color: '#22c55e', instructor: 'Dr. Patel', credits: 3 },
-];
+export function AppProvider({ children, userId, userProfile }) {
+  const name = userProfile?.user_metadata?.full_name || userProfile?.email?.split('@')[0] || 'User';
+  const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  const [user] = useState({
+    name,
+    email: userProfile?.email || '',
+    avatar: userProfile?.user_metadata?.avatar_url || null,
+    initials,
+  });
 
-const sampleAssignments = [
-  { id: '1', title: 'Lab Report #3', courseId: '1', type: 'Lab', dueDate: fmt(addDays(today, 1)), dueTime: '23:59', priority: 'High', status: 'In Progress', notes: '' },
-  { id: '2', title: 'Midterm Exam', courseId: '2', type: 'Exam', dueDate: fmt(addDays(today, 3)), dueTime: '14:00', priority: 'High', status: 'Not Started', notes: '' },
-  { id: '3', title: 'Assignment 2', courseId: '3', type: 'Assignment', dueDate: fmt(addDays(today, 5)), dueTime: '23:59', priority: 'Medium', status: 'Not Started', notes: '' },
-  { id: '4', title: 'Reading: Ch. 5-6', courseId: '1', type: 'Reading', dueDate: fmt(today), dueTime: '23:59', priority: 'Low', status: 'Not Started', notes: '' },
-  { id: '5', title: 'Quiz 3', courseId: '2', type: 'Quiz', dueDate: fmt(addDays(today, -1)), dueTime: '10:00', priority: 'Medium', status: 'Completed', notes: '' },
-  { id: '6', title: 'Project Milestone 1', courseId: '3', type: 'Assignment', dueDate: fmt(addDays(today, 2)), dueTime: '23:59', priority: 'High', status: 'Not Started', notes: '' },
-];
-
-const sampleNotes = [
-  { id: '1', title: 'Lecture 5 Notes', courseId: '1', content: 'Software design patterns: MVC, Observer, Factory...', updatedAt: new Date().toISOString() },
-  { id: '2', title: 'Derivatives Cheatsheet', courseId: '2', content: 'Power rule: d/dx[x^n] = nx^(n-1)', updatedAt: new Date().toISOString() },
-];
-
-const sampleTimeBlocks = [
-  { id: '1', title: 'CPS406 Study', courseId: '1', startTime: '09:00', endTime: '10:30', date: fmt(today), color: '#6366f1' },
-  { id: '2', title: 'MTH110 Practice', courseId: '2', startTime: '13:00', endTime: '14:00', date: fmt(today), color: '#ec4899' },
-];
-
-const sampleStudyLogs = [
-  { id: '1', courseId: '1', date: fmt(addDays(today, -1)), hours: 2, notes: 'Reviewed design patterns' },
-  { id: '2', courseId: '2', date: fmt(addDays(today, -1)), hours: 1.5, notes: 'Practice problems ch4' },
-];
-
-const sampleClubs = [
-  { id: 'c1', name: 'Google Developer Student Club', shortName: 'GDSC', color: '#06b6d4', role: 'Member', description: 'Tech community club' },
-  { id: 'c2', name: 'Computer Science Society', shortName: 'CSS', color: '#8b5cf6', role: 'VP Events', description: 'CS student society' },
-];
-
-const sampleClubTasks = [
-  { id: 'ct1', clubId: 'c1', title: 'Prepare workshop slides', dueDate: fmt(addDays(today, 4)), dueTime: '18:00', priority: 'High', status: 'Not Started', notes: '' },
-  { id: 'ct2', clubId: 'c2', title: 'Send event invites', dueDate: fmt(addDays(today, 2)), dueTime: '12:00', priority: 'Medium', status: 'Not Started', notes: '' },
-];
-
-const sampleMeetings = [
-  { id: 'm1', clubId: 'c1', title: 'Weekly Sync', date: fmt(addDays(today, -3)), time: '18:00', location: 'ENG 103', attendees: 'Alex, Sam, Jordan', agenda: 'Project updates', noteId: 'mn1' },
-];
-
-const sampleMeetingNotes = [
-  { id: 'mn1', title: 'GDSC Weekly Sync — Meeting Notes', clubId: 'c1', content: 'Attendees: Alex, Sam, Jordan\n\nAgenda:\n- Project updates\n\nNotes:\n', updatedAt: new Date().toISOString(), isMeetingNote: true },
-];
-
-// General tasks (standalone, not tied to course/club/space)
-const sampleTasks = [
-  { id: 'gt1', title: 'Apply to Google internship', category: 'Job Apps', dueDate: fmt(addDays(today, 6)), dueTime: '23:59', priority: 'High', status: 'Not Started', notes: '', color: '#f97316' },
-  { id: 'gt2', title: 'Update resume', category: 'Job Apps', dueDate: fmt(addDays(today, 3)), dueTime: '23:59', priority: 'Medium', status: 'In Progress', notes: '', color: '#f97316' },
-  { id: 'gt3', title: 'Book dentist appointment', category: 'Personal', dueDate: fmt(addDays(today, 10)), dueTime: '12:00', priority: 'Low', status: 'Not Started', notes: '', color: '#22c55e' },
-];
-
-// Spaces — custom user-created areas with sections + tasks
-const sampleSpaces = [
-  { id: 'sp1', name: 'Job Applications', icon: '💼', color: '#f97316', sections: [
-    { id: 'ss1', name: 'Resume & Cover Letter' },
-    { id: 'ss2', name: 'Applications' },
-    { id: 'ss3', name: 'Interviews' },
-  ]},
-];
-
-const sampleSpaceTasks = [
-  { id: 'spt1', spaceId: 'sp1', sectionId: 'ss1', title: 'Tailor resume for tech roles', dueDate: fmt(addDays(today, 2)), dueTime: '23:59', priority: 'High', status: 'Not Started', notes: '' },
-  { id: 'spt2', spaceId: 'sp1', sectionId: 'ss2', title: 'Apply to Shopify', dueDate: fmt(addDays(today, 5)), dueTime: '23:59', priority: 'High', status: 'Not Started', notes: '' },
-  { id: 'spt3', spaceId: 'sp1', sectionId: 'ss3', title: 'Prep for Amazon OA', dueDate: fmt(addDays(today, 8)), dueTime: '14:00', priority: 'Medium', status: 'Not Started', notes: '' },
-];
-
-export function AppProvider({ children }) {
-  const [user] = useState({ name: 'Alex Johnson', email: 'alex@example.com', avatar: 'AJ' });
-  const [courses, setCourses] = useState(sampleCourses);
-  const [assignments, setAssignments] = useState(sampleAssignments);
-  const [notes, setNotes] = useState(sampleNotes);
-  const [timeBlocks, setTimeBlocks] = useState(sampleTimeBlocks);
+  const [courses,      setCourses]      = useState([]);
+  const [assignments,  setAssignments]  = useState([]);
+  const [notes,        setNotes]        = useState([]);
+  const [meetingNotes, setMeetingNotes] = useState([]);
+  const [timeBlocks,   setTimeBlocks]   = useState([]);
+  const [studyLogs,    setStudyLogs]    = useState([]);
   const [studyPrompts, setStudyPrompts] = useState([]);
-  const [studyLogs, setStudyLogs] = useState(sampleStudyLogs);
-  const [reflections, setReflections] = useState([]);
+  const [reflections,  setReflections]  = useState([]);
+  const [clubs,        setClubs]        = useState([]);
+  const [clubTasks,    setClubTasks]    = useState([]);
+  const [meetings,     setMeetings]     = useState([]);
+  const [tasks,        setTasks]        = useState([]);
+  const [spaces,       setSpaces]       = useState([]);
+  const [spaceTasks,   setSpaceTasks]   = useState([]);
   const [notifications, setNotifications] = useState([]);
-  const [clubs, setClubs] = useState(sampleClubs);
-  const [clubTasks, setClubTasks] = useState(sampleClubTasks);
-  const [meetings, setMeetings] = useState(sampleMeetings);
-  const [meetingNotes, setMeetingNotes] = useState(sampleMeetingNotes);
-  const [tasks, setTasks] = useState(sampleTasks);
-  const [spaces, setSpaces] = useState(sampleSpaces);
-  const [spaceTasks, setSpaceTasks] = useState(sampleSpaceTasks);
+  const [dataLoaded,   setDataLoaded]   = useState(false);
 
+  // ─── Load all data on mount ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!userId) return;
+    const load = async () => {
+      const eq = (table) => supabase.from(table).select('*').eq('user_id', userId);
+      const [
+        { data: coursesD },
+        { data: assignsD },
+        { data: notesD },
+        { data: blocksD },
+        { data: logsD },
+        { data: promptsD },
+        { data: reflectsD },
+        { data: clubsD },
+        { data: clubTasksD },
+        { data: meetingsD },
+        { data: tasksD },
+        { data: spacesD },
+        { data: sectionsD },
+        { data: spaceTasksD },
+      ] = await Promise.all([
+        eq('courses'), eq('assignments'), eq('notes'), eq('time_blocks'),
+        eq('study_logs'), eq('study_prompts'), eq('reflections'),
+        eq('clubs'), eq('club_tasks'), eq('meetings'), eq('tasks'),
+        eq('spaces'), eq('space_sections'), eq('space_tasks'),
+      ]);
+
+      setCourses((coursesD || []).map(fromCourse));
+      setAssignments((assignsD || []).map(fromAssign));
+
+      const allNotes = (notesD || []).map(fromNote);
+      setNotes(allNotes.filter(n => !n.isMeetingNote));
+      setMeetingNotes(allNotes.filter(n => n.isMeetingNote));
+
+      setTimeBlocks((blocksD || []).map(fromBlock));
+      setStudyLogs((logsD || []).map(fromLog));
+      setStudyPrompts((promptsD || []).map(fromPrompt));
+      setReflections((reflectsD || []).map(fromReflect));
+      setClubs((clubsD || []).map(fromClub));
+      setClubTasks((clubTasksD || []).map(fromClubTask));
+      setMeetings((meetingsD || []).map(fromMeeting));
+      setTasks((tasksD || []).map(fromTask));
+
+      const sections = (sectionsD || []).map(fromSection);
+      const spacesWithSections = (spacesD || []).map(s => ({
+        ...fromSpace(s),
+        sections: sections.filter(sec => sec.spaceId === s.id),
+      }));
+      setSpaces(spacesWithSections);
+      setSpaceTasks((spaceTasksD || []).map(fromSpaceTask));
+      setDataLoaded(true);
+    };
+    load();
+  }, [userId]);
+
+  // ─── Notifications ──────────────────────────────────────────────────────
   useEffect(() => {
     const notifs = [];
     const allDeadlines = [
@@ -112,88 +120,313 @@ export function AppProvider({ children }) {
       if (a.status === 'Completed' || !a.dueDate) return;
       const due = new Date(a.dueDate + 'T' + (a.dueTime || '23:59'));
       const diff = (due - new Date()) / (1000 * 60 * 60);
-      if (diff > 0 && diff <= 24) notifs.push({ id: a.id, message: `${a.label} due in ${Math.round(diff)}h`, read: false });
+      if (diff > 0 && diff <= 24)
+        notifs.push({ id: a.id, message: `${a.label} due in ${Math.round(diff)}h`, read: false });
     });
     setNotifications(notifs);
   }, [assignments, clubTasks, tasks, spaceTasks]);
 
-  // Courses
-  const addCourse = (c) => setCourses(p => [...p, { ...c, id: Date.now().toString(), color: c.color || COLORS[Math.floor(Math.random()*COLORS.length)] }]);
-  const updateCourse = (id, data) => setCourses(p => p.map(c => c.id === id ? { ...c, ...data } : c));
-  const deleteCourse = (id) => setCourses(p => p.filter(c => c.id !== id));
+  // ─── Courses ────────────────────────────────────────────────────────────
+  const addCourse = async (c) => {
+    const { data, error } = await supabase.from('courses').insert({
+      user_id: userId, code: c.code, name: c.name,
+      color: c.color || randColor(), instructor: c.instructor, credits: c.credits,
+    }).select().single();
+    if (!error) setCourses(p => [...p, fromCourse(data)]);
+  };
+  const updateCourse = async (id, data) => {
+    const { error } = await supabase.from('courses').update({
+      code: data.code, name: data.name, color: data.color,
+      instructor: data.instructor, credits: data.credits,
+    }).eq('id', id);
+    if (!error) setCourses(p => p.map(c => c.id === id ? { ...c, ...data } : c));
+  };
+  const deleteCourse = async (id) => {
+    const { error } = await supabase.from('courses').delete().eq('id', id);
+    if (!error) setCourses(p => p.filter(c => c.id !== id));
+  };
 
-  // Assignments
-  const addAssignment = (a) => setAssignments(p => [...p, { ...a, id: Date.now().toString(), status: a.status || 'Not Started' }]);
-  const updateAssignment = (id, data) => setAssignments(p => p.map(a => a.id === id ? { ...a, ...data } : a));
-  const deleteAssignment = (id) => setAssignments(p => p.filter(a => a.id !== id));
+  // ─── Assignments ────────────────────────────────────────────────────────
+  const addAssignment = async (a) => {
+    const { data, error } = await supabase.from('assignments').insert({
+      user_id: userId, course_id: a.courseId, title: a.title, type: a.type,
+      due_date: a.dueDate, due_time: a.dueTime, priority: a.priority,
+      status: a.status || 'Not Started', notes: a.notes,
+    }).select().single();
+    if (!error) setAssignments(p => [...p, fromAssign(data)]);
+  };
+  const updateAssignment = async (id, data) => {
+    const { error } = await supabase.from('assignments').update({
+      course_id: data.courseId, title: data.title, type: data.type,
+      due_date: data.dueDate, due_time: data.dueTime, priority: data.priority,
+      status: data.status, notes: data.notes,
+    }).eq('id', id);
+    if (!error) setAssignments(p => p.map(a => a.id === id ? { ...a, ...data } : a));
+  };
+  const deleteAssignment = async (id) => {
+    const { error } = await supabase.from('assignments').delete().eq('id', id);
+    if (!error) setAssignments(p => p.filter(a => a.id !== id));
+  };
 
-  // Notes
-  const addNote = (n) => setNotes(p => [...p, { ...n, id: Date.now().toString(), updatedAt: new Date().toISOString() }]);
-  const updateNote = (id, data) => setNotes(p => p.map(n => n.id === id ? { ...n, ...data, updatedAt: new Date().toISOString() } : n));
-  const deleteNote = (id) => setNotes(p => p.filter(n => n.id !== id));
+  // ─── Notes ──────────────────────────────────────────────────────────────
+  const addNote = async (n) => {
+    const { data, error } = await supabase.from('notes').insert({
+      user_id: userId, course_id: n.courseId, title: n.title,
+      content: n.content, is_meeting_note: false,
+    }).select().single();
+    if (!error) setNotes(p => [...p, fromNote(data)]);
+  };
+  const updateNote = async (id, data) => {
+    const { error } = await supabase.from('notes').update({
+      title: data.title, content: data.content, updated_at: new Date().toISOString(),
+    }).eq('id', id);
+    if (!error) setNotes(p => p.map(n => n.id === id ? { ...n, ...data, updatedAt: new Date().toISOString() } : n));
+  };
+  const deleteNote = async (id) => {
+    const { error } = await supabase.from('notes').delete().eq('id', id);
+    if (!error) setNotes(p => p.filter(n => n.id !== id));
+  };
+  const updateMeetingNote = async (id, data) => {
+    const { error } = await supabase.from('notes').update({
+      title: data.title, content: data.content, updated_at: new Date().toISOString(),
+    }).eq('id', id);
+    if (!error) setMeetingNotes(p => p.map(n => n.id === id ? { ...n, ...data, updatedAt: new Date().toISOString() } : n));
+  };
 
-  // Time blocks
-  const addTimeBlock = (b) => setTimeBlocks(p => [...p, { ...b, id: Date.now().toString() }]);
-  const deleteTimeBlock = (id) => setTimeBlocks(p => p.filter(b => b.id !== id));
+  // ─── Time Blocks ────────────────────────────────────────────────────────
+  const addTimeBlock = async (b) => {
+    const { data, error } = await supabase.from('time_blocks').insert({
+      user_id: userId, course_id: b.courseId, title: b.title,
+      date: b.date, start_time: b.startTime, end_time: b.endTime, color: b.color,
+    }).select().single();
+    if (!error) setTimeBlocks(p => [...p, fromBlock(data)]);
+  };
+  const deleteTimeBlock = async (id) => {
+    const { error } = await supabase.from('time_blocks').delete().eq('id', id);
+    if (!error) setTimeBlocks(p => p.filter(b => b.id !== id));
+  };
 
-  // Study prompts
-  const addStudyPrompt = (p) => setStudyPrompts(prev => [{ ...p, id: Date.now().toString(), savedAt: new Date().toISOString() }, ...prev]);
-  const deleteStudyPrompt = (id) => setStudyPrompts(p => p.filter(s => s.id !== id));
+  // ─── Study Logs ─────────────────────────────────────────────────────────
+  const addStudyLog = async (l) => {
+    const { data, error } = await supabase.from('study_logs').insert({
+      user_id: userId, course_id: l.courseId, date: l.date, hours: l.hours, notes: l.notes,
+    }).select().single();
+    if (!error) setStudyLogs(p => [...p, fromLog(data)]);
+  };
+  const deleteStudyLog = async (id) => {
+    const { error } = await supabase.from('study_logs').delete().eq('id', id);
+    if (!error) setStudyLogs(p => p.filter(l => l.id !== id));
+  };
 
-  // Study logs
-  const addStudyLog = (l) => setStudyLogs(p => [...p, { ...l, id: Date.now().toString() }]);
-  const deleteStudyLog = (id) => setStudyLogs(p => p.filter(l => l.id !== id));
+  // ─── Study Prompts ──────────────────────────────────────────────────────
+  const addStudyPrompt = async (pr) => {
+    const { data, error } = await supabase.from('study_prompts').insert({
+      user_id: userId, prompt: pr.prompt, output_type: pr.outputType,
+      output_type_label: pr.outputTypeLabel, course_id: pr.courseId,
+      course_name: pr.courseName, source_file: pr.sourceFile,
+    }).select().single();
+    if (!error) setStudyPrompts(p => [fromPrompt(data), ...p]);
+  };
+  const deleteStudyPrompt = async (id) => {
+    const { error } = await supabase.from('study_prompts').delete().eq('id', id);
+    if (!error) setStudyPrompts(p => p.filter(s => s.id !== id));
+  };
 
-  // Reflections
-  const addReflection = (r) => setReflections(p => [{ ...r, id: Date.now().toString(), createdAt: new Date().toISOString() }, ...p]);
-  const deleteReflection = (id) => setReflections(p => p.filter(r => r.id !== id));
+  // ─── Reflections ────────────────────────────────────────────────────────
+  const addReflection = async (r) => {
+    const { data, error } = await supabase.from('reflections').insert({
+      user_id: userId, mood: r.mood, wins: r.wins, struggles: r.struggles,
+      notes: r.notes, week: r.week,
+    }).select().single();
+    if (!error) setReflections(p => [fromReflect(data), ...p]);
+  };
+  const deleteReflection = async (id) => {
+    const { error } = await supabase.from('reflections').delete().eq('id', id);
+    if (!error) setReflections(p => p.filter(r => r.id !== id));
+  };
 
-  // Clubs
-  const addClub = (c) => setClubs(p => [...p, { ...c, id: 'c' + Date.now(), color: c.color || COLORS[Math.floor(Math.random()*COLORS.length)] }]);
-  const updateClub = (id, data) => setClubs(p => p.map(c => c.id === id ? { ...c, ...data } : c));
-  const deleteClub = (id) => { setClubs(p => p.filter(c => c.id !== id)); setClubTasks(p => p.filter(t => t.clubId !== id)); setMeetings(p => p.filter(m => m.clubId !== id)); };
+  // ─── Clubs ──────────────────────────────────────────────────────────────
+  const addClub = async (c) => {
+    const { data, error } = await supabase.from('clubs').insert({
+      user_id: userId, name: c.name, short_name: c.shortName,
+      color: c.color || randColor(), role: c.role, description: c.description,
+    }).select().single();
+    if (!error) setClubs(p => [...p, fromClub(data)]);
+  };
+  const updateClub = async (id, data) => {
+    const { error } = await supabase.from('clubs').update({
+      name: data.name, short_name: data.shortName, color: data.color,
+      role: data.role, description: data.description,
+    }).eq('id', id);
+    if (!error) setClubs(p => p.map(c => c.id === id ? { ...c, ...data } : c));
+  };
+  const deleteClub = async (id) => {
+    const { error } = await supabase.from('clubs').delete().eq('id', id);
+    if (!error) {
+      setClubs(p => p.filter(c => c.id !== id));
+      setClubTasks(p => p.filter(t => t.clubId !== id));
+      setMeetings(p => p.filter(m => m.clubId !== id));
+    }
+  };
 
-  // Club tasks
-  const addClubTask = (t) => setClubTasks(p => [...p, { ...t, id: 'ct' + Date.now(), status: t.status || 'Not Started' }]);
-  const updateClubTask = (id, data) => setClubTasks(p => p.map(t => t.id === id ? { ...t, ...data } : t));
-  const deleteClubTask = (id) => setClubTasks(p => p.filter(t => t.id !== id));
+  // ─── Club Tasks ─────────────────────────────────────────────────────────
+  const addClubTask = async (t) => {
+    const { data, error } = await supabase.from('club_tasks').insert({
+      user_id: userId, club_id: t.clubId, title: t.title, type: t.type,
+      due_date: t.dueDate, due_time: t.dueTime, priority: t.priority,
+      status: t.status || 'Not Started', notes: t.notes,
+    }).select().single();
+    if (!error) setClubTasks(p => [...p, fromClubTask(data)]);
+  };
+  const updateClubTask = async (id, data) => {
+    const { error } = await supabase.from('club_tasks').update({
+      title: data.title, type: data.type, due_date: data.dueDate,
+      due_time: data.dueTime, priority: data.priority, status: data.status, notes: data.notes,
+    }).eq('id', id);
+    if (!error) setClubTasks(p => p.map(t => t.id === id ? { ...t, ...data } : t));
+  };
+  const deleteClubTask = async (id) => {
+    const { error } = await supabase.from('club_tasks').delete().eq('id', id);
+    if (!error) setClubTasks(p => p.filter(t => t.id !== id));
+  };
 
-  // Meetings
-  const addMeeting = (m) => {
-    const noteId = 'mn' + Date.now();
+  // ─── Meetings ───────────────────────────────────────────────────────────
+  const addMeeting = async (m) => {
     const club = clubs.find(c => c.id === m.clubId);
     const noteContent = `Club: ${club?.name || 'Unknown'}\nDate: ${m.date} at ${m.time}\nLocation: ${m.location || 'TBD'}\nAttendees: ${m.attendees || 'N/A'}\n\nAgenda:\n${m.agenda || '—'}\n\nMeeting Notes:\n`;
-    setMeetingNotes(p => [{ id: noteId, title: `${club?.shortName || 'Club'} — ${m.title} (${m.date})`, clubId: m.clubId, content: noteContent, updatedAt: new Date().toISOString(), isMeetingNote: true }, ...p]);
-    setMeetings(p => [...p, { ...m, id: 'm' + Date.now(), noteId }]);
+    const noteTitle = `${club?.shortName || 'Club'} — ${m.title} (${m.date})`;
+
+    const { data: noteData, error: noteErr } = await supabase.from('notes').insert({
+      user_id: userId, club_id: m.clubId, title: noteTitle,
+      content: noteContent, is_meeting_note: true,
+    }).select().single();
+    if (noteErr) return;
+
+    const { data: meetData, error: meetErr } = await supabase.from('meetings').insert({
+      user_id: userId, club_id: m.clubId, title: m.title,
+      date: m.date, time: m.time, location: m.location,
+      attendees: m.attendees, agenda: m.agenda, note_id: noteData.id,
+    }).select().single();
+    if (!meetErr) {
+      setMeetingNotes(p => [fromNote(noteData), ...p]);
+      setMeetings(p => [...p, fromMeeting(meetData)]);
+    }
   };
-  const deleteMeeting = (id) => { const m = meetings.find(m => m.id === id); if (m?.noteId) setMeetingNotes(p => p.filter(n => n.id !== m.noteId)); setMeetings(p => p.filter(m => m.id !== id)); };
-  const updateMeetingNote = (id, data) => setMeetingNotes(p => p.map(n => n.id === id ? { ...n, ...data, updatedAt: new Date().toISOString() } : n));
+  const deleteMeeting = async (id) => {
+    const meeting = meetings.find(m => m.id === id);
+    if (meeting?.noteId) {
+      await supabase.from('notes').delete().eq('id', meeting.noteId);
+      setMeetingNotes(p => p.filter(n => n.id !== meeting.noteId));
+    }
+    const { error } = await supabase.from('meetings').delete().eq('id', id);
+    if (!error) setMeetings(p => p.filter(m => m.id !== id));
+  };
 
-  // General tasks
-  const addTask = (t) => setTasks(p => [...p, { ...t, id: 'gt' + Date.now(), status: t.status || 'Not Started' }]);
-  const updateTask = (id, data) => setTasks(p => p.map(t => t.id === id ? { ...t, ...data } : t));
-  const deleteTask = (id) => setTasks(p => p.filter(t => t.id !== id));
+  // ─── General Tasks ──────────────────────────────────────────────────────
+  const addTask = async (t) => {
+    const { data, error } = await supabase.from('tasks').insert({
+      user_id: userId, title: t.title, category: t.category,
+      due_date: t.dueDate, due_time: t.dueTime, priority: t.priority,
+      status: t.status || 'Not Started', notes: t.notes, color: t.color,
+    }).select().single();
+    if (!error) setTasks(p => [...p, fromTask(data)]);
+  };
+  const updateTask = async (id, data) => {
+    const { error } = await supabase.from('tasks').update({
+      title: data.title, category: data.category, due_date: data.dueDate,
+      due_time: data.dueTime, priority: data.priority, status: data.status,
+      notes: data.notes, color: data.color,
+    }).eq('id', id);
+    if (!error) setTasks(p => p.map(t => t.id === id ? { ...t, ...data } : t));
+  };
+  const deleteTask = async (id) => {
+    const { error } = await supabase.from('tasks').delete().eq('id', id);
+    if (!error) setTasks(p => p.filter(t => t.id !== id));
+  };
 
-  // Spaces
-  const addSpace = (s) => setSpaces(p => [...p, { ...s, id: 'sp' + Date.now(), sections: [] }]);
-  const updateSpace = (id, data) => setSpaces(p => p.map(s => s.id === id ? { ...s, ...data } : s));
-  const deleteSpace = (id) => { setSpaces(p => p.filter(s => s.id !== id)); setSpaceTasks(p => p.filter(t => t.spaceId !== id)); };
-  const addSection = (spaceId, section) => setSpaces(p => p.map(s => s.id === spaceId ? { ...s, sections: [...s.sections, { ...section, id: 'ss' + Date.now() }] } : s));
-  const updateSection = (spaceId, sectionId, data) => setSpaces(p => p.map(s => s.id === spaceId ? { ...s, sections: s.sections.map(sec => sec.id === sectionId ? { ...sec, ...data } : sec) } : s));
-  const deleteSection = (spaceId, sectionId) => { setSpaces(p => p.map(s => s.id === spaceId ? { ...s, sections: s.sections.filter(sec => sec.id !== sectionId) } : s)); setSpaceTasks(p => p.filter(t => !(t.spaceId === spaceId && t.sectionId === sectionId))); };
+  // ─── Spaces ─────────────────────────────────────────────────────────────
+  const addSpace = async (s) => {
+    const { data, error } = await supabase.from('spaces').insert({
+      user_id: userId, name: s.name, icon: s.icon, color: s.color,
+    }).select().single();
+    if (!error) setSpaces(p => [...p, { ...fromSpace(data), sections: [] }]);
+  };
+  const updateSpace = async (id, data) => {
+    const { error } = await supabase.from('spaces').update({
+      name: data.name, icon: data.icon, color: data.color,
+    }).eq('id', id);
+    if (!error) setSpaces(p => p.map(s => s.id === id ? { ...s, ...data } : s));
+  };
+  const deleteSpace = async (id) => {
+    const { error } = await supabase.from('spaces').delete().eq('id', id);
+    if (!error) {
+      setSpaces(p => p.filter(s => s.id !== id));
+      setSpaceTasks(p => p.filter(t => t.spaceId !== id));
+    }
+  };
 
-  // Space tasks
-  const addSpaceTask = (t) => setSpaceTasks(p => [...p, { ...t, id: 'spt' + Date.now(), status: t.status || 'Not Started' }]);
-  const updateSpaceTask = (id, data) => setSpaceTasks(p => p.map(t => t.id === id ? { ...t, ...data } : t));
-  const deleteSpaceTask = (id) => setSpaceTasks(p => p.filter(t => t.id !== id));
+  // ─── Space Sections ─────────────────────────────────────────────────────
+  const addSection = async (spaceId, section) => {
+    const { data, error } = await supabase.from('space_sections').insert({
+      user_id: userId, space_id: spaceId, name: section.name,
+    }).select().single();
+    if (!error) {
+      setSpaces(p => p.map(s => s.id === spaceId
+        ? { ...s, sections: [...s.sections, fromSection(data)] }
+        : s
+      ));
+    }
+  };
+  const updateSection = async (spaceId, sectionId, data) => {
+    const { error } = await supabase.from('space_sections').update({ name: data.name }).eq('id', sectionId);
+    if (!error) {
+      setSpaces(p => p.map(s => s.id === spaceId
+        ? { ...s, sections: s.sections.map(sec => sec.id === sectionId ? { ...sec, ...data } : sec) }
+        : s
+      ));
+    }
+  };
+  const deleteSection = async (spaceId, sectionId) => {
+    const { error } = await supabase.from('space_sections').delete().eq('id', sectionId);
+    if (!error) {
+      setSpaces(p => p.map(s => s.id === spaceId
+        ? { ...s, sections: s.sections.filter(sec => sec.id !== sectionId) }
+        : s
+      ));
+      setSpaceTasks(p => p.filter(t => !(t.spaceId === spaceId && t.sectionId === sectionId)));
+    }
+  };
 
-  const markNotificationRead = (id) => setNotifications(p => p.map(n => n.id === id ? { ...n, read: true } : n));
+  // ─── Space Tasks ────────────────────────────────────────────────────────
+  const addSpaceTask = async (t) => {
+    const { data, error } = await supabase.from('space_tasks').insert({
+      user_id: userId, space_id: t.spaceId, section_id: t.sectionId,
+      title: t.title, due_date: t.dueDate, due_time: t.dueTime,
+      priority: t.priority, status: t.status || 'Not Started', notes: t.notes,
+    }).select().single();
+    if (!error) setSpaceTasks(p => [...p, fromSpaceTask(data)]);
+  };
+  const updateSpaceTask = async (id, data) => {
+    const { error } = await supabase.from('space_tasks').update({
+      title: data.title, due_date: data.dueDate, due_time: data.dueTime,
+      priority: data.priority, status: data.status, notes: data.notes,
+    }).eq('id', id);
+    if (!error) setSpaceTasks(p => p.map(t => t.id === id ? { ...t, ...data } : t));
+  };
+  const deleteSpaceTask = async (id) => {
+    const { error } = await supabase.from('space_tasks').delete().eq('id', id);
+    if (!error) setSpaceTasks(p => p.filter(t => t.id !== id));
+  };
+
+  const markNotificationRead = (id) =>
+    setNotifications(p => p.map(n => n.id === id ? { ...n, read: true } : n));
 
   return (
     <AppContext.Provider value={{
-      user, courses, assignments, notes, timeBlocks, studyPrompts,
-      studyLogs, reflections, notifications, COLORS, SPACE_ICONS,
-      clubs, clubTasks, meetings, meetingNotes,
+      user, dataLoaded, COLORS, SPACE_ICONS,
+      courses, assignments, notes, meetingNotes, timeBlocks,
+      studyLogs, studyPrompts, reflections, notifications,
+      clubs, clubTasks, meetings,
       tasks, spaces, spaceTasks,
       addCourse, updateCourse, deleteCourse,
       addAssignment, updateAssignment, deleteAssignment,
