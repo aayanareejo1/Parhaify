@@ -75,6 +75,7 @@ function AppInner() {
 
   const onDragStart = (clientX, clientY) => {
     dragRef.current = { dragging: true, startX: clientX, startY: clientY, origX: fabPos.x, origY: fabPos.y, moved: false };
+    document.body.style.userSelect = 'none';
   };
 
   useEffect(() => {
@@ -90,14 +91,15 @@ function AppInner() {
     const onEnd = () => {
       if (dragRef.current.dragging) {
         dragRef.current.dragging = false;
+        document.body.style.userSelect = '';
         localStorage.setItem('fabPos', JSON.stringify(fabPos));
       }
     };
     const mm = (e) => onMove(e.clientX, e.clientY);
-    const tm = (e) => onMove(e.touches[0].clientX, e.touches[0].clientY);
+    const tm = (e) => { if (dragRef.current.dragging) e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); };
     window.addEventListener('mousemove', mm);
     window.addEventListener('mouseup', onEnd);
-    window.addEventListener('touchmove', tm, { passive: true });
+    window.addEventListener('touchmove', tm, { passive: false });
     window.addEventListener('touchend', onEnd);
     return () => {
       window.removeEventListener('mousemove', mm);
