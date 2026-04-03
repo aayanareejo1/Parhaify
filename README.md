@@ -1,23 +1,28 @@
-# Parhaify
+<h1 align="center">Parhaify</h1>
 
-A full-stack student productivity web app built with **React** and **Supabase**. Parhaify helps students manage courses, assignments, clubs, tasks, notes, and wellness all in one place. It is live, fully deployed, and installable as a mobile app on iOS and Android.
+<p align="center">
+  <strong>An all-in-one student productivity app for managing academics, tasks, clubs, and wellness</strong>
+</p>
 
-**Live App:** [studyflow-aayan-areejos-projects.vercel.app](https://studyflow-aayan-areejos-projects.vercel.app)
+<p align="center">
+  <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react" />
+  <img src="https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat-square&logo=supabase&logoColor=white" />
+  <img src="https://img.shields.io/badge/Vercel-Deployed-000000?style=flat-square&logo=vercel" />
+  <img src="https://img.shields.io/badge/PWA-Installable-5A0FC8?style=flat-square&logo=pwa" />
+</p>
 
-## Tech Stack
+<p align="center">
+  <a href="https://studyflow-aayan-areejos-projects.vercel.app"><strong>Live App</strong></a>
+</p>
 
-- **React 18**
-- **Supabase** (PostgreSQL, Row Level Security, Auth)
-- **Google OAuth 2.0**
-- **Vercel** (CI/CD on every push)
-- **Progressive Web App (PWA)**
+Parhaify is a full-stack student productivity platform that brings courses, assignments, notes, tasks, clubs, and wellness into a single workspace. It runs in the browser and can be installed as an app on iOS and Android.
 
 ## Features
 
 **Academic**
 - Course and assignment tracking with priorities, statuses, and due dates
 - Calendar with month and day views aggregating all deadlines and time blocks
-- Notes editor with **auto-save**, linked to courses or clubs
+- Notes editor with auto-save, linked to courses or clubs
 
 **Productivity**
 - Personal tasks grouped by category
@@ -25,41 +30,51 @@ A full-stack student productivity web app built with **React** and **Supabase**.
 - Club and extracurricular management with meeting notes
 
 **Tools**
-- Study Assistant that extracts text from **PDF**, **DOCX**, and images to generate AI study prompts
+- Study Assistant that extracts text from PDF, DOCX, and images to generate AI study prompts
 - Wellness tracker with stress scoring, workload charts, and mood reflections
-- Quick Capture floating button with **natural language parsing**, voice input, and image upload
+- Quick Capture button with natural language parsing, voice input, and image upload
 
 **Mobile**
-- Fully **responsive** at 375px and up
-- Bottom navigation bar on mobile
-- Installable to home screen on iOS and Android
-- Draggable Quick Capture button
+- Fully responsive layout with a bottom navigation bar on mobile
+- Installable to the home screen on iOS and Android via PWA
 
-## Architecture
+## Tech stack
 
-Every user gets a fully isolated data environment using **Supabase Row Level Security** policies. The frontend communicates directly with Supabase using the **JavaScript client SDK**. **Authentication** is handled via **Google OAuth** and **Supabase Auth**, with session state managed in **React Context**. All 13 database tables are defined in `schema.sql`.
+| Layer | Technology |
+|---|---|
+| Frontend | React 18 |
+| Backend / Database | Supabase (PostgreSQL + Row Level Security) |
+| Auth | Google OAuth 2.0 via Supabase Auth |
+| Deployment | Vercel (auto-deploys on every push) |
+| App delivery | Progressive Web App (PWA) |
 
-## Getting Started
+## How it works
+
+Every user gets a fully isolated data environment through Supabase Row Level Security policies. The frontend communicates directly with Supabase using the JavaScript client SDK. All 13 database tables and their RLS policies are defined in `schema.sql`.
+
+## Getting started
 
 ```bash
-git clone https://github.com/aayanareejo1/studyflow.git
-cd studyflow
+git clone https://github.com/aayanareejo1/Parhaify.git
+cd Parhaify
 npm install
 ```
 
-Create a `.env` file:
+Create a `.env` file in the project root:
 
 ```
 REACT_APP_SUPABASE_URL=https://your-project.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-Run the app:
+Run the Supabase SQL editor and execute `schema.sql` to create all tables with RLS policies applied.
+
+Then start the app:
 
 ```bash
 npm start
 ```
 
-## Database Setup
+## License
 
-Run `schema.sql` in the Supabase SQL editor to create all tables with **RLS policies** applied.
+MIT
