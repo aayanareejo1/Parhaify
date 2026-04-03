@@ -15,7 +15,7 @@ Parhaify consolidates everything a student tracks — courses, assignments, club
 
 Built because I had 6 courses and 4 clubs and no single tool tracked all of it. Everything was split across five different apps and I was still missing things. I also wanted something that tracked my mental health over time, not just my to-do list.
 
-**Live:** [studyflow-coral.vercel.app](https://studyflow-coral.vercel.app)
+**Live:** [studyflow-coral.vercel.app](https://studyflow-aayan-areejos-projects.vercel.app/)
 
 ## Features
 
