@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Modal, ConfirmDialog, useToast } from '../components/UI';
-import { Plus, Pencil, Trash2, BookOpen } from 'lucide-react';
+import { Plus, Pencil, Trash2, BookOpen, Download } from 'lucide-react';
+import { FALL_2026_COURSES, FALL_2026_ASSIGNMENTS } from '../data/fall2026Term';
 
 function CourseForm({ initial = {}, onSave, onClose, colors }) {
   const [form, setForm] = useState({ code: '', name: '', instructor: '', credits: 3, color: colors[0], ...initial });
@@ -44,13 +45,49 @@ function CourseForm({ initial = {}, onSave, onClose, colors }) {
 }
 
 export default function Courses() {
-  const { courses, assignments, addCourse, updateCourse, deleteCourse, COLORS } = useApp();
+  const { courses, assignments, addCourse, updateCourse, deleteCourse, addAssignment, COLORS } = useApp();
   const toast = useToast();
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [confirmImport, setConfirmImport] = useState(false);
 
   const assignmentCount = (id) => assignments.filter(a => a.courseId === id).length;
+
+  const termAlreadyImported = FALL_2026_COURSES.every(fc =>
+    courses.some(c => c.code.trim().toUpperCase() === fc.code)
+  );
+
+  const importFallTerm = async () => {
+    setImporting(true);
+    try {
+      const codeToId = {};
+      courses.forEach(c => { codeToId[c.code.trim().toUpperCase()] = c.id; });
+
+      for (const fc of FALL_2026_COURSES) {
+        if (codeToId[fc.code]) continue;
+        const created = await addCourse({
+          code: fc.code, name: fc.name, instructor: fc.instructor,
+          color: fc.color, credits: fc.credits,
+        });
+        if (created) codeToId[fc.code] = created.id;
+      }
+
+      for (const fa of FALL_2026_ASSIGNMENTS) {
+        const courseId = codeToId[fa.courseCode];
+        if (!courseId) continue;
+        await addAssignment({
+          courseId, title: fa.title, type: fa.type,
+          dueDate: fa.dueDate, dueTime: fa.dueTime,
+          priority: fa.priority, status: 'Not Started', notes: fa.notes,
+        });
+      }
+      toast('Fall 2026 term imported.', 'success');
+    } finally {
+      setImporting(false);
+    }
+  };
 
   return (
     <div>
@@ -59,7 +96,14 @@ export default function Courses() {
           <div className="page-title">Courses</div>
           <div className="page-subtitle">{courses.length} course{courses.length !== 1 ? 's' : ''} enrolled</div>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowAdd(true)}><Plus size={15} /> Add Course</button>
+        <div className="flex gap-8">
+          {!termAlreadyImported && (
+            <button className="btn btn-ghost" disabled={importing} onClick={() => setConfirmImport(true)}>
+              <Download size={15} /> {importing ? 'Importing…' : 'Import Fall 2026 Term'}
+            </button>
+          )}
+          <button className="btn btn-primary" onClick={() => setShowAdd(true)}><Plus size={15} /> Add Course</button>
+        </div>
       </div>
 
       {courses.length === 0 ? (
@@ -100,6 +144,11 @@ export default function Courses() {
       <ConfirmDialog open={!!deleting} onClose={() => setDeleting(null)}
         title="Delete Course" message={`Delete "${deleting?.name}"? Assignments linked to this course will remain.`}
         onConfirm={() => { deleteCourse(deleting.id); toast('Course deleted.'); }} />
+
+      <ConfirmDialog open={confirmImport} onClose={() => setConfirmImport(false)}
+        title="Import Fall 2026 Term"
+        message="This adds CPS633, CPS393, CPS510, PCS110 and CPS721, plus every assignment, lab and midterm from their outlines, based on what's known so far. Some dates are only given as a week in the outlines and are flagged in the notes to confirm on D2L. Continue?"
+        onConfirm={() => { setConfirmImport(false); importFallTerm(); }} />
     </div>
   );
 }
