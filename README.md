@@ -25,7 +25,7 @@ Built because I had 6 courses and 4 clubs and no single tool tracked all of it. 
 - **Study Assistant** — Upload a PDF, Word doc, or photo of your notes. It extracts the text using OCR and generates AI study prompts from the content.
 - **Wellness tracking** — Log mood and stress over time with visual trends. Built for the long term, not just today.
 - **Daily planner** — A focused day view across all your commitments in one place.
-- **Brightspace sync** — A companion browser extension imports your courses and assignments directly from TMU's LMS. No manual entry.
+- **Brightspace sync** — A companion browser extension imports your courses and assignments directly from TMU's LMS. It scans automatically in the background (about every 4 hours) whenever Brightspace is open in a tab, and also whenever you load Brightspace. New items always go through a review prompt in Parhaify before anything is saved, nothing is written automatically.
 - **PWA** — Installable on iOS and Android directly from the browser.
 
 ## Tech stack

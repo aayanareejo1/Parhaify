@@ -6,24 +6,45 @@ const courseCount = document.getElementById('courseCount');
 const assignCount = document.getElementById('assignCount');
 const lastScanEl  = document.getElementById('lastScan');
 const bsUrlInput  = document.getElementById('bsUrl');
+const autoSyncToggle = document.getElementById('autoSyncToggle');
+const autoStatusEl   = document.getElementById('autoStatus');
 
 const PARHAIFY_URLS = ['https://studyflow-coral.vercel.app', 'https://studyflow-aayan-areejos-projects.vercel.app', 'http://localhost:3000'];
 
 // ── Load saved state ──────────────────────────────────────────────────────────
 const DEFAULT_BS_URL = 'https://courses.torontomu.ca';
 
-chrome.storage.local.get(['brightspace_data', 'brightspace_url'], result => {
-  bsUrlInput.value = result.brightspace_url || DEFAULT_BS_URL;
-  if (result.brightspace_data) renderStats(result.brightspace_data);
-  scanBtn.disabled = false;
-});
+chrome.storage.local.get(
+  ['brightspace_data', 'brightspace_url', 'auto_sync_enabled', 'last_auto_scan'],
+  result => {
+    bsUrlInput.value = result.brightspace_url || DEFAULT_BS_URL;
+    if (result.brightspace_data) renderStats(result.brightspace_data);
+    scanBtn.disabled = false;
+
+    autoSyncToggle.checked = result.auto_sync_enabled !== false; // default on
+    renderAutoStatus(result.last_auto_scan);
+  }
+);
 
 // Keep scan button disabled until storage loads
 scanBtn.disabled = true;
 
+// Opening the popup counts as having seen whatever the badge was flagging
+chrome.action.setBadgeText({ text: '' });
+
 bsUrlInput.addEventListener('change', () => {
   chrome.storage.local.set({ brightspace_url: bsUrlInput.value.trim() });
 });
+
+autoSyncToggle.addEventListener('change', () => {
+  chrome.storage.local.set({ auto_sync_enabled: autoSyncToggle.checked });
+});
+
+function renderAutoStatus(lastAutoScan) {
+  autoStatusEl.textContent = lastAutoScan
+    ? `Last background sync: ${new Date(lastAutoScan).toLocaleString()}`
+    : 'Runs automatically whenever Brightspace is open in a tab, about every 4 hours.';
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function setStatus(msg, type = '') {
